@@ -1,11 +1,20 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+// 빌드 타임 SSR 에러 방지 — 실제 호출 시점에 초기화
+let _client: SupabaseClient | null = null;
 
-export const supabase = createClient(url, key);
+function getClient(): SupabaseClient {
+  if (!_client) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+    _client = createClient(url, key);
+  }
+  return _client;
+}
 
 export function isSupabaseConfigured(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
   return url.startsWith("https://") && key.length > 10;
 }
 
@@ -24,7 +33,7 @@ export async function saveFace(
   name: string,
   descriptor: Float32Array
 ): Promise<FaceRecord> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("face_data")
     .insert({ name: name.trim(), descriptor: Array.from(descriptor) })
     .select()
@@ -36,7 +45,7 @@ export async function saveFace(
 
 /** 전체 얼굴 목록 로드 */
 export async function getAllFaces(): Promise<FaceRecord[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("face_data")
     .select("id, name, descriptor, created_at")
     .order("created_at", { ascending: false });
@@ -47,7 +56,7 @@ export async function getAllFaces(): Promise<FaceRecord[]> {
 
 /** 특정 이름의 얼굴 삭제 */
 export async function deleteFaceById(id: string): Promise<void> {
-  const { error } = await supabase.from("face_data").delete().eq("id", id);
+  const { error } = await getClient().from("face_data").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
 
