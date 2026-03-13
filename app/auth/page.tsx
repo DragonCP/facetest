@@ -24,8 +24,9 @@ export default function AuthPage() {
   const [liveConf, setLiveConf] = useState(0);
   const [liveMatchRate, setLiveMatchRate] = useState(0);
   const [liveMatchName, setLiveMatchName] = useState("");
+  const [confirmCount, setConfirmCount] = useState(0);  // UI 표시용 state
 
-  const confirmCountRef = useRef(0);
+  const confirmCountRef = useRef(0);  // 로직용 ref (stale closure 방지)
   const scanningRef = useRef(false);
   const facesRef = useRef<FaceRecord[]>([]);
 
@@ -41,6 +42,7 @@ export default function AuthPage() {
       setFaces(data);
       setStatus("scanning");
       confirmCountRef.current = 0;
+      setConfirmCount(0);
       scanningRef.current = true;
       setLiveConf(0);
       setLiveMatchRate(0);
@@ -60,6 +62,7 @@ export default function AuthPage() {
       setLiveMatchRate(0);
       setLiveMatchName("");
       confirmCountRef.current = 0;
+      setConfirmCount(0);
       return;
     }
 
@@ -75,6 +78,7 @@ export default function AuthPage() {
 
     if (best.matchRate >= AUTH_THRESHOLD) {
       confirmCountRef.current += 1;
+      setConfirmCount(confirmCountRef.current);   // UI 표시 업데이트
 
       if (confirmCountRef.current >= CONFIRM_FRAMES) {
         // 인증 통과!
@@ -89,12 +93,14 @@ export default function AuthPage() {
     } else {
       // 임계값 미달 시 카운터 리셋
       confirmCountRef.current = 0;
+      setConfirmCount(0);
     }
   }, []);
 
   const reset = () => {
     scanningRef.current = false;
     confirmCountRef.current = 0;
+    setConfirmCount(0);
     setStatus("idle");
     setLiveConf(0);
     setLiveMatchRate(0);
@@ -281,7 +287,7 @@ export default function AuthPage() {
               {[
                 { label: "카메라 신뢰도", value: liveConf > 0 ? `${liveConf}%` : "--", ok: liveConf >= 60 },
                 { label: "일치율", value: liveMatchRate > 0 ? `${liveMatchRate}%` : "--", ok: liveMatchRate >= AUTH_THRESHOLD },
-                { label: "확인 중", value: `${Math.min(confirmCountRef.current, CONFIRM_FRAMES)}/${CONFIRM_FRAMES}`, ok: confirmCountRef.current > 0 },
+                { label: "확인 중", value: `${Math.min(confirmCount, CONFIRM_FRAMES)}/${CONFIRM_FRAMES}`, ok: confirmCount > 0 },
               ].map((it) => (
                 <div key={it.label} className="rounded-xl px-2 py-2.5 text-center"
                   style={{ background: it.ok ? "rgba(99,102,241,.1)" : "rgba(255,255,255,.04)", border: `1px solid ${it.ok ? "rgba(99,102,241,.35)" : "rgba(255,255,255,.07)"}` }}>
